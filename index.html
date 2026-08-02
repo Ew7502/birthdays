@@ -19,20 +19,40 @@
       background-color: var(--bg);
       color: var(--text);
       margin: 0;
-      padding: 2rem;
+      padding: 2rem 1rem;
       display: flex;
       flex-direction: column;
       align-items: center;
     }
 
-    .container {
-      max-width: 800px;
-      width: 100%;
+    .container { max-width: 800px; width: 100%; }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
     }
 
-    h1 { text-align: center; margin-bottom: 1.5rem; }
+    h1 { margin: 0; }
 
-    /* Hero Card for Next Birthday */
+    .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 0.5rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-secondary { background: #334155; }
+    .btn-danger { background: #ef4444; }
+
+    /* Hero Card */
     .hero-card {
       background: linear-gradient(135deg, #6366f1, var(--accent));
       padding: 2rem;
@@ -40,13 +60,13 @@
       text-align: center;
       box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
       margin-bottom: 2rem;
+      cursor: pointer;
     }
+    .hero-card h2 { margin: 0 0 0.5rem 0; font-size: 1.1rem; opacity: 0.9; }
+    .hero-card .name { font-size: 2.2rem; font-weight: bold; margin: 0.5rem 0; }
+    .hero-card .days-left { font-size: 1rem; background: rgba(255,255,255,0.2); padding: 0.4rem 1rem; border-radius: 2rem; display: inline-block; }
 
-    .hero-card h2 { margin: 0 0 0.5rem 0; font-size: 1.25rem; opacity: 0.9; }
-    .hero-card .name { font-size: 2.5rem; font-weight: bold; margin: 0.5rem 0; }
-    .hero-card .days-left { font-size: 1.1rem; background: rgba(255,255,255,0.2); padding: 0.4rem 1rem; border-radius: 2rem; display: inline-block; }
-
-    /* Grid for all friends */
+    /* Grid */
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -58,105 +78,94 @@
       padding: 1.25rem;
       border-radius: 0.75rem;
       border: 1px solid #334155;
-      cursor: pointer;
-      transition: transform 0.2s, border-color 0.2s;
-    }
-
-    .card:hover {
-      transform: translateY(-4px);
-      border-color: var(--accent);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
 
     .card-header { font-weight: bold; font-size: 1.2rem; margin-bottom: 0.25rem; }
     .card-date { color: var(--subtext); font-size: 0.9rem; }
-    .card-notes { font-size: 0.85rem; color: #cbd5e1; margin-top: 0.75rem; font-style: italic; }
+    .card-notes { font-size: 0.85rem; color: #cbd5e1; margin: 0.75rem 0; font-style: italic; }
+    
+    .card-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .card-actions button {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+    }
+
+    /* Modal Styling */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    .modal-content {
+      background: var(--card-bg);
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      width: 90%;
+      max-width: 400px;
+      border: 1px solid #334155;
+    }
+    .modal-content h3 { margin-top: 0; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 0.85rem; margin-bottom: 0.3rem; color: var(--subtext); }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--bg);
+      border: 1px solid #334155;
+      color: white;
+      border-radius: 0.4rem;
+      box-sizing: border-box;
+    }
+
+    .controls { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <h1>🎈 Friends' Birthday Hub</h1>
+    <header>
+      <h1>🎈 Birthday Hub</h1>
+      <button class="btn" onclick="openModal()">+ Add Friend</button>
+    </header>
 
     <div class="hero-card" id="hero">
       <h2>🎉 NEXT BIRTHDAY</h2>
-      <div class="name" id="hero-name">Loading...</div>
+      <div class="name" id="hero-name">No Birthdays Added</div>
       <div class="days-left" id="hero-days">---</div>
     </div>
 
     <h2>All Upcoming Birthdays</h2>
     <div class="grid" id="friends-grid"></div>
+
+    <hr style="border: 0; border-top: 1px solid #334155; margin: 2rem 0;">
+    <div class="controls">
+      <button class="btn btn-secondary" onclick="exportData()">💾 Export Backup</button>
+      <button class="btn btn-secondary" onclick="importData()">📂 Import Backup</button>
+    </div>
   </div>
 
-  <script>
-    // ------------------------------------------------------------------
-    // 1. EDIT YOUR FRIENDS' DATA HERE!
-    // Format: "MM-DD" (Month-Day)
-    // ------------------------------------------------------------------
-    const friends = [
-      { name: "daisy", date: "08-02", notes: "" },
-      { name: "Grace", date: "05-03", notes: "Wants a new mechanical keyboard" },
-      { name: "mia", date: "02-15", notes: "Gift idea: Vintage vinyl records" },
-      { name: "Taylor", date: "05-15", notes: "Loves matcha & cozy socks" }
-    ];
-
-    // Helper: calculate days until next birthday
-    function getDaysUntil(dateStr) {
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const [month, day] = dateStr.split('-').map(Number);
+  <div class="modal" id="friendModal">
+    <div class="modal-content">
+      <h3 id="modalTitle">Add Friend</h3>
+      <input type="hidden" id="editIndex" value="-1">
       
-      let nextBday = new Date(currentYear, month - 1, day);
-      
-      // Reset time to midnight for clean day calculations
-      now.setHours(0, 0, 0, 0);
-
-      // If the birthday passed this year, look at next year
-      if (nextBday < now) {
-        nextBday.setFullYear(currentYear + 1);
-      }
-
-      const diffTime = nextBday - now;
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    }
-
-    // Sort friends by how soon their birthday is coming up
-    friends.sort((a, b) => getDaysUntil(a.date) - getDaysUntil(b.date));
-
-    // Render Hero Card (Next Up)
-    const nextFriend = friends[0];
-    const daysLeft = getDaysUntil(nextFriend.date);
-    document.getElementById('hero-name').textContent = nextFriend.name;
-    document.getElementById('hero-days').textContent = daysLeft === 0 
-      ? "🎂 TODAY IS THEIR BIRTHDAY! 🎉" 
-      : `In ${daysLeft} day${daysLeft === 1 ? '' : 's'}`;
-
-    // Render Grid Cards
-    const grid = document.getElementById('friends-grid');
-    friends.forEach(friend => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      
-      const days = getDaysUntil(friend.date);
-      const dayText = days === 0 ? "🎉 TODAY!" : `In ${days} days`;
-
-      card.innerHTML = `
-        <div class="card-header">${friend.name}</div>
-        <div class="card-date">Date: ${friend.date} • <strong>${dayText}</strong></div>
-        <div class="card-notes">"${friend.notes}"</div>
-      `;
-
-      // Add confetti effect on click!
-      card.addEventListener('click', () => {
-        confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
-      });
-
-      grid.appendChild(card);
-    });
-
-    // Confetti on clicking the hero card too
-    document.getElementById('hero').addEventListener('click', () => {
-      confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
-    });
-  </script>
-</body>
-</html>
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="friendName" placeholder="Alex" required>
+      </div>
+      <div class="form-group">
+        <label>Birthday (MM-DD)</label>
+        <input type
