@@ -78,7 +78,6 @@
       padding: 1.25rem;
       border-radius: 0.75rem;
       border: 1px solid #334155;
-      position: relative;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -99,16 +98,21 @@
       font-size: 0.8rem;
     }
 
-    /* Modal Styling */
-    .modal {
-      display: none;
+    /* Fixed Modal Popup */
+    .modal-overlay {
       position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.7);
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: none;
       justify-content: center;
       align-items: center;
-      z-index: 100;
+      z-index: 9999;
     }
+
+    .modal-overlay.active {
+      display: flex !important;
+    }
+
     .modal-content {
       background: var(--card-bg);
       padding: 1.5rem;
@@ -138,7 +142,7 @@
   <div class="container">
     <header>
       <h1>🎈 Birthday Hub</h1>
-      <button class="btn" onclick="openModal()">+ Add Friend</button>
+      <button class="btn" id="addBtn">+ Add Friend</button>
     </header>
 
     <div class="hero-card" id="hero">
@@ -157,7 +161,7 @@
     </div>
   </div>
 
-  <div class="modal" id="friendModal">
+  <div class="modal-overlay" id="friendModal">
     <div class="modal-content">
       <h3 id="modalTitle">Add Friend</h3>
       <input type="hidden" id="editIndex" value="-1">
@@ -168,4 +172,180 @@
       </div>
       <div class="form-group">
         <label>Birthday (MM-DD)</label>
-        <input type
+        <input type="text" id="friendDate" placeholder="04-15" pattern="\d{2}-\d{2}" required>
+      </div>
+      <div class="form-group">
+        <label>Notes / Gift Ideas</label>
+        <textarea id="friendNotes" rows="3" placeholder="Loves coffee & board games"></textarea>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+        <button class="btn" id="saveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Default data
+    const defaultFriends = [
+      { name: "Alex", date: "04-15", notes: "Loves board games & dark roast coffee" },
+      { name: "Sam", date: "09-02", notes: "Wants a new mechanical keyboard" }
+    ];
+
+    let friends = JSON.parse(localStorage.getItem('birthday_data')) || defaultFriends;
+
+    function saveToStorage() {
+      localStorage.setItem('birthday_data', JSON.stringify(friends));
+      render();
+    }
+
+    function getDaysUntil(dateStr) {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const [month, day] = dateStr.split('-').map(Number);
+      let nextBday = new Date(currentYear, month - 1, day);
+      now.setHours(0, 0, 0, 0);
+
+      if (nextBday < now) nextBday.setFullYear(currentYear + 1);
+      const diffTime = nextBday - now;
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    function render() {
+      const grid = document.getElementById('friends-grid');
+      grid.innerHTML = '';
+
+      if (friends.length === 0) {
+        document.getElementById('hero-name').textContent = "No Birthdays";
+        document.getElementById('hero-days').textContent = "Add someone to get started!";
+        return;
+      }
+
+      friends.sort((a, b) => getDaysUntil(a.date) - getDaysUntil(b.date));
+
+      const nextFriend = friends[0];
+      const daysLeft = getDaysUntil(nextFriend.date);
+      document.getElementById('hero-name').textContent = nextFriend.name;
+      document.getElementById('hero-days').textContent = daysLeft === 0 
+        ? "🎂 TODAY IS THEIR BIRTHDAY! 🎉" 
+        : `In ${daysLeft} day${daysLeft === 1 ? '' : 's'}`;
+
+      friends.forEach((friend, index) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const days = getDaysUntil(friend.date);
+        const dayText = days === 0 ? "🎉 TODAY!" : `In ${days} days`;
+
+        card.innerHTML = `
+          <div>
+            <div class="card-header">${friend.name}</div>
+            <div class="card-date">Date: ${friend.date} • <strong>${dayText}</strong></div>
+            <div class="card-notes">"${friend.notes || 'No notes added'}"</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-secondary" onclick="editFriend(${index})">✏️ Edit</button>
+            <button class="btn btn-danger" onclick="deleteFriend(${index})">🗑️ Delete</button>
+            <button class="btn" style="padding: 0.3rem 0.6rem;" onclick="triggerConfetti()">🎉</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // Modal Event Controls
+    const modal = document.getElementById('friendModal');
+    const addBtn = document.getElementById('addBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const saveBtn = document.getElementById('saveBtn');
+
+    addBtn.addEventListener('click', () => openModal());
+    cancelBtn.addEventListener('click', () => closeModal());
+    saveBtn.addEventListener('click', () => saveFriend());
+
+    function openModal(editIdx = -1) {
+      document.getElementById('editIndex').value = editIdx;
+      if (editIdx >= 0) {
+        document.getElementById('modalTitle').textContent = "Edit Friend";
+        document.getElementById('friendName').value = friends[editIdx].name;
+        document.getElementById('friendDate').value = friends[editIdx].date;
+        document.getElementById('friendNotes').value = friends[editIdx].notes || "";
+      } else {
+        document.getElementById('modalTitle').textContent = "Add Friend";
+        document.getElementById('friendName').value = "";
+        document.getElementById('friendDate').value = "";
+        document.getElementById('friendNotes').value = "";
+      }
+      modal.classList.add('active');
+    }
+
+    function closeModal() {
+      modal.classList.remove('active');
+    }
+
+    function saveFriend() {
+      const name = document.getElementById('friendName').value.trim();
+      const date = document.getElementById('friendDate').value.trim();
+      const notes = document.getElementById('friendNotes').value.trim();
+      const editIdx = parseInt(document.getElementById('editIndex').value);
+
+      if (!name || !date.match(/^\d{2}-\d{2}$/)) {
+        alert("Please enter a valid Name and Date in MM-DD format (e.g., 05-21)");
+        return;
+      }
+
+      if (editIdx >= 0) {
+        friends[editIdx] = { name, date, notes };
+      } else {
+        friends.push({ name, date, notes });
+      }
+
+      saveToStorage();
+      closeModal();
+    }
+
+    function editFriend(index) { openModal(index); }
+
+    function deleteFriend(index) {
+      if (confirm(`Remove ${friends[index].name} from your list?`)) {
+        friends.splice(index, 1);
+        saveToStorage();
+      }
+    }
+
+    function triggerConfetti() {
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    }
+
+    document.getElementById('hero').addEventListener('click', triggerConfetti);
+
+    function exportData() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(friends));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "birthdays_backup.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importData() {
+      const json = prompt("Paste your backup JSON data here:");
+      if (json) {
+        try {
+          const parsed = JSON.parse(json);
+          if (Array.isArray(parsed)) {
+            friends = parsed;
+            saveToStorage();
+            alert("Birthdays imported successfully!");
+          }
+        } catch(e) {
+          alert("Invalid JSON data format.");
+        }
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>
