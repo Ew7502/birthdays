@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Friends' Birthday Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #8b5cf6;
+      --text: #f8fafc;
+      --subtext: #94a3b8;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+    }
+
+    h1 { text-align: center; margin-bottom: 1.5rem; }
+
+    /* Hero Card for Next Birthday */
+    .hero-card {
+      background: linear-gradient(135deg, #6366f1, var(--accent));
+      padding: 2rem;
+      border-radius: 1rem;
+      text-align: center;
+      box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+      margin-bottom: 2rem;
+    }
+
+    .hero-card h2 { margin: 0 0 0.5rem 0; font-size: 1.25rem; opacity: 0.9; }
+    .hero-card .name { font-size: 2.5rem; font-weight: bold; margin: 0.5rem 0; }
+    .hero-card .days-left { font-size: 1.1rem; background: rgba(255,255,255,0.2); padding: 0.4rem 1rem; border-radius: 2rem; display: inline-block; }
+
+    /* Grid for all friends */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      padding: 1.25rem;
+      border-radius: 0.75rem;
+      border: 1px solid #334155;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+    }
+
+    .card-header { font-weight: bold; font-size: 1.2rem; margin-bottom: 0.25rem; }
+    .card-date { color: var(--subtext); font-size: 0.9rem; }
+    .card-notes { font-size: 0.85rem; color: #cbd5e1; margin-top: 0.75rem; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>🎈 Friends' Birthday Hub</h1>
+
+    <div class="hero-card" id="hero">
+      <h2>🎉 NEXT BIRTHDAY</h2>
+      <div class="name" id="hero-name">Loading...</div>
+      <div class="days-left" id="hero-days">---</div>
+    </div>
+
+    <h2>All Upcoming Birthdays</h2>
+    <div class="grid" id="friends-grid"></div>
+  </div>
+
+  <script>
+    // ------------------------------------------------------------------
+    // 1. EDIT YOUR FRIENDS' DATA HERE!
+    // Format: "MM-DD" (Month-Day)
+    // ------------------------------------------------------------------
+    const friends = [
+      { name: "daisy", date: "08-02", notes: "" },
+      { name: "Grace", date: "05-03", notes: "Wants a new mechanical keyboard" },
+      { name: "mia", date: "02-15", notes: "Gift idea: Vintage vinyl records" },
+      { name: "Taylor", date: "05-15", notes: "Loves matcha & cozy socks" }
+    ];
+
+    // Helper: calculate days until next birthday
+    function getDaysUntil(dateStr) {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const [month, day] = dateStr.split('-').map(Number);
+      
+      let nextBday = new Date(currentYear, month - 1, day);
+      
+      // Reset time to midnight for clean day calculations
+      now.setHours(0, 0, 0, 0);
+
+      // If the birthday passed this year, look at next year
+      if (nextBday < now) {
+        nextBday.setFullYear(currentYear + 1);
+      }
+
+      const diffTime = nextBday - now;
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    // Sort friends by how soon their birthday is coming up
+    friends.sort((a, b) => getDaysUntil(a.date) - getDaysUntil(b.date));
+
+    // Render Hero Card (Next Up)
+    const nextFriend = friends[0];
+    const daysLeft = getDaysUntil(nextFriend.date);
+    document.getElementById('hero-name').textContent = nextFriend.name;
+    document.getElementById('hero-days').textContent = daysLeft === 0 
+      ? "🎂 TODAY IS THEIR BIRTHDAY! 🎉" 
+      : `In ${daysLeft} day${daysLeft === 1 ? '' : 's'}`;
+
+    // Render Grid Cards
+    const grid = document.getElementById('friends-grid');
+    friends.forEach(friend => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      
+      const days = getDaysUntil(friend.date);
+      const dayText = days === 0 ? "🎉 TODAY!" : `In ${days} days`;
+
+      card.innerHTML = `
+        <div class="card-header">${friend.name}</div>
+        <div class="card-date">Date: ${friend.date} • <strong>${dayText}</strong></div>
+        <div class="card-notes">"${friend.notes}"</div>
+      `;
+
+      // Add confetti effect on click!
+      card.addEventListener('click', () => {
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
+      });
+
+      grid.appendChild(card);
+    });
+
+    // Confetti on clicking the hero card too
+    document.getElementById('hero').addEventListener('click', () => {
+      confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
+    });
+  </script>
+</body>
+</html>
